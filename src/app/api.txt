@@ -1,0 +1,219 @@
+// const getFetch = async () => {
+//   const res = await fetch(
+//     "https://uselessfacts.jsph.pl/api/v2/facts/random?language=en"
+//   );
+//   // console.log(res);
+//   // console.log(res.ok);
+//   if (!res.ok) {
+//     throw new Error("Fail to fetch data 😈");
+//   }
+//   return res.json();
+// };
+
+// export default function Home() {
+//   const uselessFact = await getFetch();
+//   console.log(uselessFact);
+//   return (
+//     <div>
+//       <h1 className="text-2xl text-white font-black text-center bg-slate-400">
+//         API Fetching
+//       </h1>
+//     </div>
+//   );
+// }
+interface useLessFact {
+  id: string;
+  text: string;
+  source: string;
+  source_url: string;
+  language: string;
+  permalink: string;
+}
+const getFetch = async () => {
+  try {
+    const res = await fetch(
+      "https://uselessfacts.jsph.pl/api/v2/facts/random?language=en",
+      { cache: "no-store" }
+      //! OR
+      //*  "https://uselessfacts.jsph.pl/api/v2/facts/random?language=en",{next:{revalidate:3000}}
+    );
+    //* console.log("Response Status Code:", res.status)
+    //* console.log(res.ok)
+    if (!res.ok) {
+      throw new Error("Fail to fetch data 😈");
+    }
+    return res.json();
+  } catch (error) {
+    console.log((error as { message: string }).message);
+    return undefined;
+    // return {
+    //   error: error
+    // };
+  }
+};
+
+export default async function Home() {
+  const uselessFact: useLessFact = await getFetch();
+  // console.log(uselessFact);
+  // uselessFact.text
+  if (!uselessFact) {
+    return (
+      <div>
+        <h1 className="text-2xl text-white font-black text-center bg-slate-400 ">
+          API Fetching
+        </h1>
+        <p className="text-red-500 text-center">
+          Oops! We couldnt fetch the data. Please try again later or check the
+          link.
+        </p>
+        {/* <p className="text-center">{uselessFact.text}</p> */}
+        {/* <p>{uselessFact.language}</p> */}
+      </div>
+    );
+  }
+  return (
+    <div>
+      <h1 className="text-2xl text-white font-black text-center bg-slate-400">
+        API Fetching
+      </h1>
+      <p className="text-center text-3xl">{uselessFact.text}</p>
+      {/* <p className="text-sm text-gray-600 text-center">
+        Language: {uselessFact.language}
+      </p> */}
+    </div>
+  );
+}
+
+
+
+or
+
+interface Fact {
+  id: string;
+  text: string;
+  source: string;
+  source_url: string;
+  language: string;
+  permalink: string;
+}
+
+const getData = async (): Promise<Fact | { error: string }> => {
+  try {
+    const res = await fetch(
+      `https://uselessfacts.jsphffff.pl/api/v2/facts/random?language=en`, // Intentional wrong URL to trigger error
+      {
+        cache: "no-store",
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch Data: ${res.statusText}`);
+    }
+
+    return res.json(); // This will return a Fact object
+  } catch (error: any) {
+    console.error("Error:", error.message);
+    return { error: "Failed to fetch data from the server. Please check the URL or try again later." };
+  }
+};
+
+export default async function Home() {
+  const quoteData = await getData();
+
+  // Check if the returned data is an error or a Fact object
+  if ((quoteData as { error: string }).error) {
+    return <h2>{(quoteData as { error: string }).error}</h2>; // Display error message if fetch fails
+  }
+
+  // Now, quoteData is typed as a Fact object
+  const fact = quoteData as Fact; // Type assertion to ensure TypeScript knows it's a Fact object
+
+  return (
+    <>
+      <h1>Bilal</h1>
+      <p>{fact.text}</p> {/* Display the fetched fact */}
+      <p>
+        <strong>Source:</strong> <a href={fact.source_url}>{fact.source}</a>
+      </p>
+    </>
+  );
+}
+
+
+or
+
+"use client";
+
+import useSWR from "swr";
+
+// API Endpoint
+const url = "https://uselessfacts.jsph.pl/api/v2/facts/random?language=en";
+
+// TypeScript Interface for the Fact
+interface Fact {
+  id: string;
+  text: string;
+  source: string;
+  source_url: string;
+  language: string;
+  permalink: string;
+}
+
+// Fetcher Function
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export default function Home() {
+  const { data, error, isLoading } = useSWR<Fact>(url, fetcher);
+
+  if (error) return <div>⚠️ Failed to load fact. Please try again!</div>;
+
+  if (isLoading)
+    return (
+      <div
+        style={{
+          height: "100vh", // Full viewport height
+          display: "flex",
+          justifyContent: "center", // Center vertically
+          alignItems: "center", // Center horizontally
+          textAlign: "center",
+          fontSize: "20px",
+          fontWeight: "bold",
+        }}
+      >
+        ⏳ Loading...
+      </div>
+    );
+
+  // Intentionally set data.text and data.source_url to undefined
+  const factText = data?.text; // Always undefined
+  const factSource = data?.source_url; // Always undefined
+
+  return (
+    <div
+      style={{
+        height: "100vh", // Full viewport height
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center", // Center vertically
+        alignItems: "center", // Center horizontally
+        textAlign: "center", // Text align center
+        fontFamily: "Arial, sans-serif",
+        padding: "20px",
+      }}
+    >
+      <h1 className="font-black text-3xl">Random Useless Fact 🤓</h1>
+      {/* Undefined values will render nothing */}
+      <p style={{ fontSize: "18px", color: "#333" }}>{factText}</p>
+      <p>
+        <a
+          href={factSource}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "blue", textDecoration: "underline" }}
+        >
+          Source 🔗
+        </a>
+      </p>
+    </div>
+  );
+}
